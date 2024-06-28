@@ -1,0 +1,423 @@
+---
+title: "BAN502 Project 1 Kennedy Teresa"
+author: "T Kennedy"
+date: "2024-06-16"
+output: word_document
+---
+
+#Phase 1 Project Exploratory/Descriptive Analysis
+
+```{r}
+options(tidyverse.quiet = TRUE)
+library(tidyverse)
+library(tidymodels)
+library(dplyr)
+library(skimr) #missing values
+library(naniar) #missing values visualization
+library(mice) # for imputation
+library(caret) # for confusion matrix
+library(rpart) #for classification trees
+library(rpart.plot) #plotting trees
+library(RColorBrewer) #better visualization of trees
+library(rattle) #better visualization of ctrees
+library(usemodels) #lasso and ridge
+library(glmnet) #lasso and ridge
+library(ROCR)
+```
+
+
+```{r}
+train <- read_csv("~/R Data/Project/train.csv")
+
+```
+
+```{r}
+summary(train)
+```
+
+
+
+```{r}
+str(train)
+skim(train)
+```
+
+```{r Create train1, convert chr, drop id variable}
+train1 = train %>% mutate_if(is.character,as_factor)
+train1 = select(train1, -id)
+```
+
+
+```{r}
+summary(train1)
+```
+
+
+```{r}
+str(train1)
+skim(train1)
+```
+
+
+```{r}
+gg_miss_var(train1)
+```
+
+```{r}
+gg_miss_case(train1)
+```
+
+```{r}
+vis_miss(train1)
+```
+
+```{r}
+gg_miss_fct(x = train1, fct = failure)
+```
+
+```{r}
+gg_miss_upset(train1, nsets =10)
+```
+
+```{r create train2 and remove all NA by row result over half of obs lost}
+train2 = train1 %>% drop_na()
+skim(train2)
+```
+
+```{r creste for smaller percentage drop}
+train3 = train1
+train3 = train3 %>% drop_na(loading) %>%
+  drop_na(measurement_3) %>%
+  drop_na(measurement_4) %>%
+  drop_na(measurement_5) %>%
+  drop_na(measurement_6) %>%
+  drop_na(measurement_7) 
+
+skim(train3)
+```
+
+```{r create for larger percentage drop}
+train4= train1
+train4 = train4 %>% drop_na(measurement_17) %>%
+  drop_na(measurement_16) %>%
+  drop_na(measurement_15) %>%
+  drop_na(measurement_14) %>%
+  drop_na(measurement_13)
+
+skim(train4)
+```
+
+```{r impudate all}
+set.seed(1234)
+imp_data1 = mice(train1, m=5, method='pmm', printFlag=FALSE)
+summary(imp_data1)
+```
+
+```{r}
+densityplot(imp_data1, ~measurement_11)
+```
+```{r}
+densityplot(imp_data1, ~loading)
+```
+
+
+
+
+```{r impudate larger percentage}
+set.seed(1234)
+imp_data3= mice(train3,m=5, method='pmm', printFlag=FALSE)
+summary(imp_data3)
+```
+
+```{r}
+densityplot(imp_data3,~measurement_11)
+```
+
+```{r}
+densityplot(imp_data3,~loading)
+```
+
+```{r impudate smaller percentage}
+set.seed(1234)
+imp_data4= mice(train4,m=5, method='pmm', printFlag=FALSE)
+
+```
+
+```{r}
+summary(imp_data4)
+```
+
+
+```{r}
+densityplot(imp_data4,~measurement_11)
+```
+
+```{r}
+densityplot(imp_data3,~failure)
+```
+
+```{r}
+densityplot(imp_data3,~failure)
+```
+
+
+```{r}
+train3_complete = complete(imp_data3)
+summary(train3_complete)
+```
+
+
+
+```{r}
+str(train1)
+summary(train1)
+skim(train1)
+```
+
+```{r}
+skim(train3_complete)
+```
+
+```{r}
+ggplot(train3_complete,aes(x= product_code, fill = failure)) +geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete,aes(x= loading,fill = failure)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete,aes(x= attribute_0,fill = failure)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete,aes(x= attribute_1,fill = failure)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete,aes(x= attribute_2,fill = failure)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete,aes(x= attribute_3,fill = failure)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete,aes(x= measurement_0,fill = failure)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete,aes(x= measurement_1,fill = failure)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete,aes(x= measurement_2,fill = failure)) + geom_bar() + theme_bw()
+```
+```{r}
+ggplot(train3_complete,aes(x= measurement_3,fill = failure)) + geom_bar() + theme_bw()
+```
+```{r}
+ggplot(train3_complete,aes(x= measurement_4,fill = failure)) + geom_bar() + theme_bw()
+```
+```{r}
+ggplot(train3_complete,aes(x= measurement_5,fill = failure)) + geom_bar() + theme_bw()
+```
+```{r}
+ggplot(train3_complete,aes(x= measurement_6,fill = failure)) + geom_bar() + theme_bw()
+```
+```{r}
+ggplot(train3_complete,aes(x= measurement_7,fill = failure)) + geom_bar() + theme_bw()
+```
+```{r}
+ggplot(train3_complete,aes(x= measurement_8,fill = failure)) + geom_bar() + theme_bw()
+```
+```{r}
+ggplot(train3_complete,aes(x= measurement_9,fill = failure)) + geom_bar() + theme_bw()
+```
+```{r}
+ggplot(train3_complete,aes(x= measurement_10,fill = failure)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete,aes(x= measurement_11,fill = failure)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete,aes(x= measurement_12,fill = failure)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete,aes(x= measurement_13,fill = failure)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete,aes(x= measurement_14,fill = failure)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete,aes(x= measurement_15,fill = failure)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete,aes(x= measurement_16,fill = failure)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete,aes(x= measurement_17,fill = failure)) + geom_bar() + theme_bw()
+```
+
+
+```{r}
+t1 = table(train3_complete$failure, train3_complete$product_code)
+prop.table(t1, margin = 2)
+```
+
+```{r}
+t1 = table(train3_complete$failure, train3_complete$loading)
+prop.table(t1, margin = 2)
+```
+
+```{r}
+t1 = table(train3_complete$failure, train3_complete$attribute_0)
+prop.table(t1, margin = 2)
+```
+
+```{r}
+t1 = table(train3_complete$failure, train3_complete$attribute_1)
+prop.table(t1, margin = 2)
+```
+
+```{r}
+t1 = table(train3_complete$failure, train3_complete$attribute_2)
+prop.table(t1, margin = 2)
+```
+```{r}
+t1 = table(train3_complete$failure, train3_complete$attribute_3)
+prop.table(t1, margin = 2)
+```
+```{r}
+t1 = table(train3_complete$failure, train3_complete$measurement_0)
+prop.table(t1, margin = 2)
+```
+```{r}
+t1 = table(train3_complete$failure, train3_complete$measurement_1)
+prop.table(t1, margin = 2)
+```
+
+```{r}
+t1 = table(train3_complete$failure, train3_complete$measurement_2)
+prop.table(t1, margin = 2)
+```
+
+```{r}
+ggplot(train3_complete, aes(x=failure, y=measurement_2)) + geom_boxplot() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=failure, y=measurement_1)) + geom_boxplot() + theme_bw()
+```
+
+```{r}
+t1 = table(train3_complete$failure, train3_complete$measurement_1)
+prop.table(t1, margin = 2)
+```
+
+
+```{r}
+ggplot(train3_complete, aes(x=failure, y=measurement_17)) + geom_boxplot() + theme_bw()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_17)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_16)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_15)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_14)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_13)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_12)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_11)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_10)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_9)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_8)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_7)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_6)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_5)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_4)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_3)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_2)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=measurement_1)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x=attribute_3)) + geom_histogram()
+```
+
+```{r}
+ggplot(train3_complete, aes(x= attribute_2)) + geom_histogram()
+```
+
+
+
+```{r}
+ggplot(train3_complete, aes(x= loading))+ geom_histogram()
+```
+
+
+
+
+```{r No - remove}
+table1 = table(train1$failure, train1$loading)
+prop.table(table1, margin = 2)
+```
+
+
+
+
+

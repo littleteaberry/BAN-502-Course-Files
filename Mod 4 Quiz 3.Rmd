@@ -1,0 +1,157 @@
+---
+title: "Mod 4 Quiz 3"
+author: "T Kennedy"
+date: "2024-06-10"
+output: html_document
+---
+
+```{r}
+options(tidyverse.quiet = TRUE)
+library(tidyverse)
+library(tidymodels)
+library(caret)
+library(rpart) 
+library(rpart.plot)
+library(RColorBrewer)
+```
+```{r}
+heart <- read_csv("~/R Data/heart_disease-1.csv")
+```
+
+```{r}
+heart = heart %>% mutate(HeartDisease = as_factor(HeartDisease)) %>% 
+  mutate(HeartDisease = fct_recode(HeartDisease, "No" = "0", "Yes" = "1" )) %>%
+  mutate(ChestPainType = as_factor(ChestPainType)) %>% 
+  mutate(Sex = as_factor(Sex)) %>%
+  mutate(RestingECG = as_factor(RestingECG)) %>% 
+  mutate(ExerciseAngina = as_factor(ExerciseAngina)) %>% 
+  mutate(ST_Slope = as_factor(ST_Slope)) 
+
+str(heart)
+#skim(heart)
+```
+
+```{r}
+set.seed(12345)
+heart_split = initial_split(heart, prop = 0.7, strata = HeartDisease)
+train = training(heart_split)
+test = testing(heart_split)
+```
+
+##CLASSIFICATION TREE
+```{r} 
+heart_recipe = recipe(HeartDisease ~., train)
+
+tree_model = decision_tree() %>%
+  set_engine ("rpart", model = TRUE) %>%
+  set_mode("classification")
+
+heart_wflow =
+  workflow() %>%
+  add_model(tree_model) %>%
+  add_recipe(heart_recipe)
+
+heart_fit = fit(heart_wflow, train)
+```
+
+```{r}
+##extract the tree's fit from the fit object
+tree = heart_fit %>%
+extract_fit_parsnip() %>%
+pluck("fit")
+```
+
+
+```{r}
+#plot the tree
+fancyRpartPlot(tree)
+```
+
+
+#"rpat" complexity parameter "cp"
+```{r}
+heart_fit$fit$fit$fit$cptable
+```
+#xerror is cross validator
+#5 0.10 is optimal, local minimum 0.39372
+#creste folds
+```{r}
+set.seed(123)
+folds = vfold_cv(train, v=5)
+```
+
+```{r}
+heart_recipe = recipe(HeartDisease ~., train) %>%
+  step_dummy(all_nominal(), -all_outcomes())
+
+tree_model = decision_tree(cost_complexity = tune()) %>%
+  set_engine ("rpart", model = TRUE) %>%
+  set_mode("classification")
+
+tree_grid = grid_regular(cost_complexity(),
+                         levels = 25)
+
+heart_wflow =
+  workflow() %>%
+  add_model(tree_model) %>%
+  add_recipe(heart_recipe)
+
+tree_res =
+  heart_wflow %>%
+  tune_grid(
+    resamples = folds,
+    grid = tree_grid
+  )
+
+tree_res
+```
+
+```{r}
+tree_res %>%
+  collect_metrics() %>%
+  ggplot(aes(cost_complexity, mean)) +
+  geom_line(size = 1.5, alpha = 0.6) +
+  geom_point(size = 2) +
+  facet_wrap(~ .metric, scales = "free", nrow = 2)
+```
+
+```{r}
+best_tree = tree_res %>%
+  select_best(metric = "accuracy")
+best_tree
+```
+```{r}
+final_wf =
+  heart_wflow %>%
+  finalize_workflow(best_tree)
+```
+
+```{r}
+final_fit = fit(final_wf, train)
+
+tree = final_fit %>%
+  pull_workflow_fit() %>%
+  pluck("fit")
+
+fancyRpartPlot(tree, tweak = 1.2)
+```
+Predictions on training set  
+
+```{r}
+treepred = predict(final_fit, train, type = "class")
+head(treepred)
+```
+
+caret confusion matrix and accuracy, etc
+```{r}
+confusionMatrix(treepred$.pred_class,train$HeartDisease,positive="Yes")#prediction first then actual
+```
+Predictions on testing set
+```{r}
+treepred_test = predict(final_fit, test, type = "class")
+```
+```{r}
+confusionMatrix(treepred_test$.pred_class, test$HeartDisease, positive="Yes")
+```
+
+
